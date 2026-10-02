@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>지구본 그림자 실험실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Gaegu:wght@400;700&display=swap">
+<style>
+/* Layout: 교과서 실험 순서를 따라가는 단계 칩 + 단계별 작업대(장면 캔버스 · 확대 캔버스 · 조작 패널) */
+:root{
+  --bg:#e9eff2; --paper:#ffffff; --paper2:#f3f7f9; --ink:#1b2a36; --muted:#5a6b78; --line:#cfdae1;
+  --lamp:#f0a81c; --lamp-ink:#8a5a00; --lamp-soft:#fdf0d2; --sky:#2b6b9c; --sky-soft:#dcebf6;
+  --good:#23825a; --good-soft:#dcf1e6; --bad:#c2453b; --bad-soft:#fbe3e0;
+  --f-display:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-hand:"Gaegu","Gowun Dodum","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11181e; --paper:#18222a; --paper2:#1e2a33; --ink:#e4ecf1; --muted:#93a3af; --line:#2d3b46;
+  --lamp:#f3b63a; --lamp-ink:#f3c766; --lamp-soft:#3a2f17; --sky:#77b3e2; --sky-soft:#1d3346;
+  --good:#5fcf98; --good-soft:#163a2a; --bad:#f08178; --bad-soft:#41201d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11181e; --paper:#18222a; --paper2:#1e2a33; --ink:#e4ecf1; --muted:#93a3af; --line:#2d3b46;
+  --lamp:#f3b63a; --lamp-ink:#f3c766; --lamp-soft:#3a2f17; --sky:#77b3e2; --sky-soft:#1d3346;
+  --good:#5fcf98; --good-soft:#163a2a; --bad:#f08178; --bad-soft:#41201d; color-scheme:dark}
+html{color-scheme:light}body{margin:0}img{max-width:100%}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6}
+.wrap{max-width:1140px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+.eyebrow{font-size:13px;letter-spacing:.06em;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0;text-wrap:balance}
+h1 .sun{color:var(--lamp)}
+h2{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;line-height:1.25;text-wrap:balance}
+h3{font-family:var(--f-display);font-weight:400;font-size:18px;margin:0}
+p{margin:0}
+.teach{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
+.steps{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink);
+  border-radius:999px;padding:6px 13px 6px 6px;font:inherit;font-size:14px;cursor:pointer}
+.chip .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--paper2);font-family:var(--f-display);font-size:14px}
+.chip.cur{border-color:var(--lamp);background:var(--lamp-soft)}
+.chip.cur .n{background:var(--lamp);color:#2a1d00}
+.chip.done .n{background:var(--good);color:#fff}
+.chip:disabled{opacity:.45;cursor:not-allowed}
+.chip:focus-visible,.btn:focus-visible,.pill:focus-visible,.seg button:focus-visible,.ruler:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px}
+.stephead{display:flex;flex-direction:column;gap:6px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-display);font-size:14px;color:var(--good)}
+.tag b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--good);color:#fff;font-weight:400}
+.desc{color:var(--muted);max-width:68ch}
+.grid2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:880px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+canvas{display:block;width:100%;height:auto;border-radius:12px;touch-action:none}
+.cv-label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.btn{font:inherit;font-family:var(--f-display);font-size:16px;border:1px solid var(--line);background:var(--paper2);color:var(--ink);
+  border-radius:12px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover:not(:disabled){border-color:var(--sky)}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:#2a1d00}
+.btn.go{background:var(--sky);border-color:var(--sky);color:#fff}
+:root[data-theme="dark"] .btn.go{color:#0d1a24}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#0d1a24}}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.panel{background:var(--paper2);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{border-radius:12px;padding:10px 12px;font-size:15px;background:var(--sky-soft)}
+.msg.good{background:var(--good-soft);color:var(--ink)}
+.msg.bad{background:var(--bad-soft)}
+.msg.warn{background:var(--lamp-soft)}
+.safety{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--muted)}
+.safety b{flex:0 0 auto;background:var(--bad);color:#fff;border-radius:6px;padding:0 7px;font-family:var(--f-display);font-weight:400}
+.slider{display:flex;flex-direction:column;gap:4px}
+.slider label{display:flex;justify-content:space-between;font-size:15px}
+.slider output{font-family:var(--f-display);color:var(--sky)}
+input[type=range]{width:100%;accent-color:var(--lamp)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{font:inherit;font-size:15px;border:0;background:var(--paper);color:var(--ink);padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--sky);color:#fff}
+.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.checklist li{display:flex;gap:8px;align-items:flex-start}
+.checklist li::before{content:"";flex:0 0 18px;height:18px;margin-top:3px;border-radius:5px;border:2px solid var(--line)}
+.checklist li.ok::before{background:var(--good);border-color:var(--good);box-shadow:inset 0 0 0 3px var(--paper2)}
+.checklist li.ok{color:var(--muted)}
+.measure{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.measure input{font:inherit;font-family:var(--f-hand);font-size:22px;width:90px;padding:4px 8px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);text-align:center}
+.closeup-wrap{position:relative;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden;border-radius:12px}
+.ruler{position:absolute;left:0;top:0;cursor:grab;touch-action:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.ruler:active{cursor:grabbing}
+.ruler svg{display:block;width:100%;height:100%}
+.sheet{font-family:var(--f-hand);font-size:21px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sheet div{background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:4px 8px;display:flex;align-items:center;gap:6px}
+.sheet .pos{font-family:var(--f-display);font-size:14px;width:24px;height:24px;border-radius:50%;background:var(--paper2);display:grid;place-items:center;flex:0 0 auto}
+.sheet .now{border-style:solid;border-color:var(--lamp)}
+.sheet .v{font-variant-numeric:tabular-nums;color:var(--sky);font-weight:700}
+.log{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.log th,.log td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
+.log th{font-weight:400;color:var(--muted);font-size:13px}
+.tray{display:flex;align-items:center;gap:14px}
+.gtoken{width:74px;height:74px;border-radius:50%;flex:0 0 auto;cursor:grab;touch-action:none;border:0;padding:0;background:none}
+.gtoken svg{width:100%;height:100%;display:block}
+.ghost{position:fixed;width:88px;height:88px;margin:-44px 0 0 -44px;pointer-events:none;z-index:20;opacity:.85}
+/* 실험관찰 6 */
+.obs{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(0,1fr) minmax(0,1fr);gap:8px 10px;font-family:var(--f-hand);font-size:20px;align-items:stretch}
+.obs .h{font-family:var(--f-hand);font-size:19px;text-align:center;border-radius:12px;padding:8px;line-height:1.3}
+.obs .h.v{background:#e1e4f2;color:#22304a}.obs .h.t{background:#d6eef8;color:#16374a}
+:root[data-theme="dark"] .obs .h.v{background:#2a3150;color:#e4e8fa}:root[data-theme="dark"] .obs .h.t{background:#1b3a4b;color:#dff2fc}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .obs .h.v{background:#2a3150;color:#e4e8fa}:root:not([data-theme="light"]) .obs .h.t{background:#1b3a4b;color:#dff2fc}}
+.obs .lbl{border:1.5px solid var(--ink);border-radius:10px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:6px;line-height:1.3;min-height:52px}
+.obs .lbl hr{width:85%;border:0;border-top:2px dotted var(--muted);margin:6px 0}
+.obs .cell{border:1.5px solid var(--line);border-radius:10px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:6px}
+.obs .cell.v{border-color:#9aa4d4}.obs .cell.t{border-color:#7fc3e4}
+.obs .pair{display:flex;flex-wrap:wrap;gap:4px 6px;justify-content:center}
+.obs .arrow{grid-column:2 / span 2;display:grid;grid-template-columns:1fr 1fr;color:var(--good);text-align:center;line-height:1;font-family:var(--f-body);font-size:16px}
+.obs .gap{grid-column:1}
+.pill{font:inherit;font-family:var(--f-hand);font-size:19px;border:0;background:none;color:var(--ink);cursor:pointer;padding:2px 6px;border-radius:8px;display:inline-flex;align-items:center;gap:4px}
+.pill::before{content:"";width:16px;height:16px;border:2px solid var(--muted);border-radius:4px;flex:0 0 auto}
+.pill[aria-pressed="true"]::before{background:var(--sky);border-color:var(--sky);box-shadow:inset 0 0 0 2px var(--paper)}
+.pill.right{background:var(--good-soft)}.pill.wrong{background:var(--bad-soft);text-decoration:line-through}
+.mark{font-family:var(--f-display);font-size:14px;text-align:center}
+.mark.o{color:var(--good)}.mark.x{color:var(--bad)}
+.score{font-family:var(--f-display);font-size:30px;color:var(--lamp-ink)}
+.minirec{display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:4px 8px;font-size:15px;font-variant-numeric:tabular-nums;align-items:center}
+.minirec .k{color:var(--muted);font-size:13px}
+.minirec .val{font-family:var(--f-hand);font-size:20px;text-align:center;background:var(--paper2);border-radius:8px}
+.blankline{font-size:19px;line-height:2.4}
+.blank{display:inline-flex;gap:4px;vertical-align:middle;border-bottom:2px solid var(--ink);padding:0 4px;margin:0 2px}
+.blank .pill{font-size:18px}
+.done-banner{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.switchbox{display:flex;align-items:center;gap:16px}
+.wall{width:92px;height:128px;border-radius:14px;background:linear-gradient(#f4f1ea,#dedad0);border:1px solid #b9b3a5;display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.25);cursor:pointer;padding:0}
+.wall .rocker{width:46px;height:78px;border-radius:8px;background:linear-gradient(#fbfaf6,#d8d4ca);border:1px solid #aaa394;position:relative;transition:transform .15s}
+.wall .rocker::after{content:"";position:absolute;left:50%;width:14px;height:5px;margin-left:-7px;border-radius:3px;background:#c33;top:10px;transition:background .15s}
+.wall[aria-pressed="true"] .rocker{transform:perspective(200px) rotateX(18deg)}
+.wall[aria-pressed="true"] .rocker::after{background:#3bbf6b}
+.wall[aria-pressed="false"] .rocker{transform:perspective(200px) rotateX(-18deg)}
+.hint{font-size:14px;color:var(--muted)}
+.big-hint{border-left:4px solid var(--good);padding:8px 12px;background:var(--good-soft);border-radius:4px 10px 10px 4px;font-size:15px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (max-width:520px){.sheet{grid-template-columns:repeat(2,minmax(0,1fr))}.obs{grid-template-columns:minmax(78px,.7fr) minmax(0,1fr) minmax(0,1fr);font-size:17px}.pill{font-size:16px}.obs .h{font-size:15px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <div class="eyebrow">6학년 2학기 과학 · 계절의 변화 · 지구본 실험</div>
+    <h1>지구본 <span class="sun">그림자</span> 실험실</h1>
+  </div>
+  <label class="teach"><input type="checkbox" id="freeNav"> 선생님 모드(모든 단계 열기)</label>
+</header>
+<nav class="steps" id="steps" aria-label="실험 단계"></nav>
+
+<!-- 1. 측정기 붙이기 -->
+<section class="card step" data-step="0">
+  <div class="grid2">
+    <div class="col">
+      <canvas id="mapCv" width="1280" height="880" aria-label="지구본 확대 화면"></canvas>
+      <div class="row">
+        <button class="btn" id="zIn">＋ 확대</button><button class="btn" id="zOut">－ 축소</button>
+        <span class="hint">끌어서 지구본을 움직이고, 휠·두 손가락으로도 확대할 수 있어요.</span>
+      </div>
+    </div>
+    <div class="col">
+      <div class="stephead"><span class="tag"><b>1</b>실험해요</span><h2>지구본의 우리나라 위치에 태양 고도 측정기를 붙여요</h2>
+      <p class="desc">지구본을 확대해서 우리나라를 정확히 찾은 뒤, 아래 측정기를 끌어다 붙이세요. 측정기 한가운데 막대가 놓이는 곳이 기준이에요.</p></div>
+      <div class="panel">
+        <div class="tray"><button class="gtoken" id="gToken" aria-label="태양 고도 측정기 (끌어서 붙이기)"></button>
+          <div><h3>태양 고도 측정기</h3><p class="hint">한가운데 막대(점)를 우리나라에 맞춰요.</p></div></div>
+        <div class="msg" id="mapMsg">먼저 지구본을 확대해서 우리나라를 찾아보세요.</div>
+      </div>
+      <button class="btn primary next" id="next0" disabled>다음 단계 →</button>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 전등과 지구본 놓기 -->
+<section class="card step" data-step="1" hidden>
+  <div class="grid2">
+    <div class="col"><canvas id="sideCv" width="1280" height="640" aria-label="옆에서 본 전등과 지구본"></canvas>
+      <div class="cv-label"><span>옆에서 본 모습</span><span>눈금 1칸 = 5 cm</span></div></div>
+    <div class="col">
+      <div class="stephead"><span class="tag"><b>2</b><b>3</b>실험해요</span><h2>전등과 지구본을 알맞게 놓아요</h2>
+      <p class="desc">전등의 중심 높이를 지구본의 중심 높이와 같게 맞추고, 자전축을 수직으로 세운 뒤 전등에서 30 cm 떨어진 곳에 지구본을 놓아요.</p></div>
+      <div class="panel">
+        <div class="slider"><label for="lampH">전등 중심 높이 <output id="lampHo"></output></label><input type="range" id="lampH" min="6" max="30" step="1" value="9"></div>
+        <div class="slider"><label for="gapS">전등~지구본 거리 <output id="gapSo"></output></label><input type="range" id="gapS" min="10" max="50" step="1" value="44"></div>
+        <button class="btn" id="standUp">자전축 수직으로 세우기</button>
+        <ul class="checklist" id="setupList">
+          <li data-k="h">전등 중심 높이 = 지구본 중심 높이 (18 cm)</li>
+          <li data-k="a">지구본 자전축을 수직으로 세우기</li>
+          <li data-k="d">전등에서 30 cm 떨어진 곳에 놓기</li>
+        </ul>
+      </div>
+      <button class="btn primary next" id="next1" disabled>다음 단계 →</button>
+    </div>
+  </div>
+</section>
+
+<!-- 실험 작업대 (3~6단계 공용) -->
+<section class="card step" data-step="lab" id="lab" hidden>
+  <div class="col" style="gap:14px">
+    <div class="stephead"><span class="tag" id="labTag"></span><h2 id="labTitle"></h2><p class="desc" id="labDesc"></p></div>
+    <div class="grid2">
+      <div class="col">
+        <canvas id="sceneCv" width="1520" height="880" aria-label="전등과 지구본 실험 장면"></canvas>
+        <div class="cv-label"><span id="sceneCap">위에서 비스듬히 본 실험 장면</span><span id="sceneInfo"></span></div>
+        <div id="ctl-light" class="panel ctl">
+          <div class="switchbox"><button class="wall" id="wallSw" aria-pressed="false" aria-label="전등 스위치"><span class="rocker"></span></button>
+            <div class="col" style="gap:4px"><h3>전등 스위치</h3><p class="hint">스위치를 눌러 전등을 켜 보세요.</p></div></div>
+          <div class="safety"><b>안전</b><span>불이 켜진 전등을 오랫동안 보거나 맨손으로 만지지 않도록 조심해요.</span></div>
+        </div>
+        <div id="ctl-explore" class="panel ctl">
+          <div class="slider"><label for="exGap">전등~지구본 거리 <output id="exGapO"></output></label><input type="range" id="exGap" min="10" max="45" step="5" value="30"></div>
+          <div class="row"><span>자전축</span><div class="seg" role="group" aria-label="자전축"><button id="exV" aria-pressed="true">수직</button><button id="exT" aria-pressed="false">기울임 (23.5°)</button></div></div>
+          <ul class="checklist" id="exList">
+            <li data-k="m1">거리 30 cm, 자전축 수직으로 그림자 재기</li>
+            <li data-k="m2">거리를 바꿔서 (자전축 수직) 그림자 재기</li>
+            <li data-k="m3">거리 30 cm, 자전축을 기울여서 그림자 재기</li>
+          </ul>
+        </div>
+        <div id="ctl-orbit" class="panel ctl">
+          <div class="row" style="justify-content:space-between"><h3 id="posNow"></h3><span class="hint" id="orbitHint"></span></div>
+          <div class="row" id="orbitBtns">
+            <button class="btn" id="tiltBtn">자전축 23.5° 기울이기</button>
+            <button class="btn" id="axisBtn">자전축 방향 맞추기</button>
+            <button class="btn" id="faceBtn">측정기가 전등을 향하게 돌리기</button>
+            <button class="btn go" id="moveBtn">다음 위치로 공전 ↺</button>
+          </div>
+          <div class="msg warn" id="tipBox" hidden><b>가장 주의할 점</b><br>지구본을 공전시킬 때 자전축이 항상 같은 방향을 향하게 해요. 위치를 바꾸면 먼저 자전축 방향을 맞추고, 그다음 측정기가 전등을 향하게 해요.</div>
+          <div class="sheet" id="sheet"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="closeup-wrap" id="cuWrap">
+          <canvas id="cuCv" width="800" height="760" aria-label="태양 고도 측정기 확대 화면"></canvas>
+          <div class="ruler" id="ruler" tabindex="0" role="slider" aria-label="자 (끌어서 옮기기, R키로 돌리기)"></div>
+        </div>
+        <div class="row"><button class="btn" id="rotR">자 돌리기 ↺ 90°</button><button class="btn" id="resetR">자 처음 자리로</button></div>
+        <p class="hint">자를 끌어서 0 눈금을 가운데 막대에 맞추고, 그림자 끝이 닿는 눈금을 읽어요. (작은 눈금 1칸 = 1 mm)</p>
+        <div class="panel">
+          <div class="measure"><label for="mIn">그림자 길이</label><input id="mIn" inputmode="decimal" placeholder="0.0" autocomplete="off"><span>cm</span><button class="btn primary" id="mBtn">기록하기</button></div>
+          <div class="msg" id="mMsg">전등을 켜고 그림자를 재어 보세요.</div>
+          <table class="log" id="exLog" hidden><thead><tr><th>거리</th><th>자전축</th><th>그림자 길이</th></tr></thead><tbody></tbody></table>
+        </div>
+        <button class="btn primary next" id="nextLab" disabled>다음 단계 →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 결과 한눈에 보기 -->
+<section class="card step" data-step="sum" id="sum" hidden>
+  <div class="col" style="gap:14px">
+    <div class="stephead"><span class="tag" id="sumTag"></span><h2 id="sumTitle"></h2><p class="desc" id="sumDesc"></p></div>
+    <canvas id="sumCv" width="1520" height="1280" aria-label="네 위치의 지구본과 기록한 그림자 길이"></canvas>
+    <div class="row" style="justify-content:space-between"><span class="hint" id="sumCap"></span><button class="btn" id="sumReplay">다시 보기</button></div>
+    <div class="big-hint" id="sumQ"></div>
+    <button class="btn primary" id="sumNext" style="align-self:flex-start">다음 단계 →</button>
+  </div>
+</section>
+
+<!-- 7. 실험관찰 6 -->
+<section class="card step" data-step="8" hidden>
+  <div class="col" style="gap:14px">
+    <div class="stephead"><span class="tag"><b>6</b>실험해요</span><h2>지구본 자전축의 기울기에 따른 그림자 길이 변화로 알 수 있는 것을 써 봐요</h2>
+      <p class="desc">내가 잰 결과를 보고, 칸마다 ‘변함’과 ‘변하지 않음’ 중 하나를 고르세요. 다 고르면 채점해요.</p></div>
+    <div class="panel"><h3>내가 잰 그림자 길이 (cm)</h3><div class="minirec" id="miniRec"></div></div>
+    <div class="obs" id="obs"></div>
+    <div class="row"><button class="btn primary" id="gradeBtn">채점하기</button><button class="btn" id="retryBtn" hidden>다시 풀기</button><button class="btn" id="ansBtn" hidden>정답 보기</button><span class="score" id="score"></span></div>
+    <div class="msg" id="obsMsg" hidden></div>
+    <button class="btn primary next" id="next6" disabled style="align-self:flex-start">정리하러 가기 →</button>
+  </div>
+</section>
+
+<!-- 8. 정리해요 -->
+<section class="card step" data-step="9" hidden>
+  <div class="col" style="gap:14px">
+    <div class="stephead"><span class="tag">정리해요</span><h2>계절의 변화가 생기는 까닭을 써 봐요</h2>
+    <p class="desc">빈칸에 알맞은 말을 골라 문장을 완성하고 채점해 보세요.</p></div>
+    <div class="panel blankline" id="blanks"></div>
+    <div class="row"><button class="btn primary" id="gradeB">채점하기</button><span class="score" id="scoreB"></span></div>
+    <div class="msg" id="sumMsg" hidden></div>
+  </div>
+</section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const D2R=Math.PI/180;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const STEPS=["측정기 붙이기","전등·지구본 놓기","전등 켜기","미리 해 보기","수직 자전축","수직 결과 보기","기울어진 자전축","기울임 결과 보기","실험관찰 6","정리해요"];
+const LABSTEP={2:"light",3:"explore",4:"vert",6:"tilt"};
+const POS=["가","나","다","라"];
+const GLOBE_R=10, GNOMON=0.8, TILT=23.5;
+
+/* ---------- 소리 ---------- */
+let AC=null;
+function snd(type){
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const t=AC.currentTime;
+    if(type==="click"){
+      const b=AC.createBuffer(1,AC.sampleRate*0.04,AC.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,4);
+      const s=AC.createBufferSource();s.buffer=b;const g=AC.createGain();g.gain.value=.6;s.connect(g).connect(AC.destination);s.start(t);
+      return;
+    }
+    const tones=type==="good"?[660,880]:type==="bad"?[300,220]:[520];
+    tones.forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type="sine";o.frequency.value=f;
+      g.gain.setValueAtTime(0,t+i*.1);g.gain.linearRampToValueAtTime(.15,t+i*.1+.02);g.gain.exponentialRampToValueAtTime(.001,t+i*.1+.25);
+      o.connect(g).connect(AC.destination);o.start(t+i*.1);o.stop(t+i*.1+.3);});
+  }catch(e){}
+}
+
+/* ---------- 상태 ---------- */
+const S={step:0,max:0,free:false,lat:37.5,lon:127,lampOn:false};
+// 실험 모드별 상태: th=공전 위치각(화면 기준), tg=측정기가 향한 방향각, tilt=기울기, psi=자전축 기울어진 방향(0=오른쪽)
+const M={
+  light:{th:-180,tg:-180,gap:30,tilt:0,psi:0},
+  explore:{th:-180,tg:-180,gap:30,tilt:0,psi:0,log:[],miss:{}},
+  vert:{th:-90,tg:0,gap:30,tilt:0,psi:0,idx:0,rec:{},tries:0},
+  tilt:{th:-90,tg:-90,gap:30,tilt:0,psi:0,idx:0,rec:{},tries:0,tilted:false}
+};
+let mode="light";
+
+/* ---------- 계산: 그림자 길이 ---------- */
+function axisVec(m){const T=m.tilt*D2R,p=m.psi*D2R;return [Math.sin(T)*Math.cos(p),Math.cos(T),Math.sin(T)*Math.sin(p)];}
+function dirTo(th){return [-Math.cos(th*D2R),0,-Math.sin(th*D2R)];}
+function norm(v){const l=Math.hypot(...v);return v.map(x=>x/l);}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function gaugeNormal(m,th){const a=axisVec(m),u=dirTo(th),k=dot(u,a);const e=norm([u[0]-k*a[0],u[1]-k*a[1],u[2]-k*a[2]]);const p=S.lat*D2R;
+  return [Math.cos(p)*e[0]+Math.sin(p)*a[0],Math.cos(p)*e[1]+Math.sin(p)*a[1],Math.cos(p)*e[2]+Math.sin(p)*a[2]];}
+function shadow(m){
+  const n=gaugeNormal(m,m.th),u=dirTo(m.th),d=m.gap+GLOBE_R;
+  const P=n.map(x=>x*GLOBE_R),v=[d*u[0]-P[0],-P[1],d*u[2]-P[2]];
+  const s=dot(norm(v),n),alt=Math.asin(s)/D2R;
+  return {alt,len:GNOMON/Math.tan(alt*D2R)};
+}
+const facing=m=>Math.abs(m.tg-m.th)<0.5;
+const axisOk=m=>Math.abs(((m.psi%360)+360)%360)<0.5||Math.abs(((m.psi%360)+360)%360-360)<0.5;
+function ready(m){return S.lampOn&&facing(m)&&axisOk(m)&&!anim.length;}
+
+/* ---------- 애니메이션 ---------- */
+const anim=[];
+function tween(o,k,to,ms,cb){anim.push({o,k,from:o[k],to,ms,t0:performance.now(),cb});}
+function stepAnim(now){
+  for(let i=anim.length-1;i>=0;i--){const a=anim[i];let p=clamp((now-a.t0)/a.ms,0,1);const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+    a.o[a.k]=a.from+(a.to-a.from)*e;if(p>=1){a.o[a.k]=a.to;anim.splice(i,1);a.cb&&a.cb();refreshLab();}}
+}
+
+/* ---------- 단계 이동 ---------- */
+const stepsNav=$("#steps");
+STEPS.forEach((n,i)=>{const b=document.createElement("button");b.className="chip";b.innerHTML=`<span class="n">${i+1}</span>${n}`;b.onclick=()=>go(i);stepsNav.appendChild(b);});
+function unlock(i){S.max=Math.max(S.max,i);renderNav();}
+function renderNav(){[...stepsNav.children].forEach((b,i)=>{b.classList.toggle("cur",i===S.step);b.classList.toggle("done",i<S.max&&i!==S.step);b.disabled=!S.free&&i>S.max;});}
+function go(i){
+  if(!S.free&&i>S.max)return;S.step=i;
+  document.querySelectorAll(".step").forEach(s=>s.hidden=true);
+  if(LABSTEP[i]){$("#lab").hidden=false;setMode(LABSTEP[i]);}
+  else if(i===5||i===7){$("#sum").hidden=false;openSum(i===5?"vert":"tilt");}
+  else document.querySelector(`.step[data-step="${i}"]`).hidden=false;
+  if(i===8)buildObs();
+  renderNav();window.scrollTo({top:0,behavior:"smooth"});
+}
+$("#freeNav").onchange=e=>{S.free=e.target.checked;renderNav();if(LABSTEP[S.step])refreshLab();};
+
+/* =========================================================
+   1단계: 지구본 확대 + 측정기 붙이기
+   ========================================================= */
+const LAND=[
+ [[60,25],[60,55],[140,55],[140.5,48],[138,45],[133,42.8],[130.6,42.4],[129.7,42.4],[128.2,41.9],[126.9,41.8],[125.5,40.6],[124.3,40],[121.7,39],[121.2,38.8],[121.6,39.4],[122.2,40.4],[121,40.9],[119.5,39.9],[118.4,39],[117.7,38.8],[118.9,37.4],[119.8,37.1],[120.7,37.8],[122.5,37.4],[122.5,36.9],[120.5,36.1],[119.2,34.9],[120.6,33.4],[121.9,31.7],[121.5,30.9],[122,29.9],[121.4,28.4],[120.5,27.2],[119.6,25.9],[119,25],[116,22.7],[110,21],[106,20],[108,15],[105,9],[100,13],[98,8],[98,16],[92,22],[88,22],[80,15],[77,8],[73,20],[67,25]],
+ [[129.7,33.2],[130.9,31],[131.5,31.4],[132,33],[133,33.5],[134.7,33.8],[135.4,34.6],[136.9,34.3],[138.8,34.6],[139.9,35],[140.8,35.7],[141,37],[141.6,38.3],[141.9,39.9],[141.4,41.4],[140,40.7],[139.9,39.5],[139.2,38.1],[138.5,37.4],[137,36.9],[136.7,37.4],[135.6,35.5],[133,35.5],[131,34.4],[130,33.6]],
+ [[140,41.4],[141.2,41.8],[143.2,42],[145.5,43.3],[144.3,44],[141.8,45.4],[141.6,43.2],[140,42.6]],
+ [[120.1,22],[121,22],[122,25.1],[121.5,25.3],[120.1,23.5]],
+ [[126.2,33.4],[126.9,33.4],[126.95,33.55],[126.3,33.55]],
+ [[114,-22],[122,-18],[130,-12],[137,-12],[142,-11],[146,-19],[153,-26],[150,-37],[141,-38],[135,-34],[129,-31],[115,-34]],
+ [[95,5],[98,4],[104,-2],[106,-6],[102,-5],[96,2]],[[109,1],[117,7],[119,1],[116,-3],[110,-2]],[[131,-1],[141,-3],[150,-10],[141,-9],[133,-4]],
+ [[120,18],[122,18],[122,14],[124,13],[126,8],[124,6],[121,10],[120,14]]
+];
+const KOREA=[[124.3,40],[125.5,40.6],[126.9,41.8],[128.2,41.9],[129.7,42.4],[130.6,42.4],[129.8,41],[129.7,40.8],[128.6,40],[127.6,39.7],[127.5,39.2],[128.4,38.6],[129.4,37],[129.4,36],[129.5,35.5],[129.2,35.1],[128.6,35],[127.8,34.8],[126.9,34.5],[126.4,34.4],[126.2,34.6],[126.5,35.5],[126.8,36.1],[126.2,36.7],[126.6,37.4],[126.1,37.7],[125.3,37.7],[125.1,38.1],[124.7,38.2],[125.2,38.8],[125.3,39.5],[124.7,39.6]];
+const JEJU=LAND[4];
+const LABELS=[["대한민국",127.9,36.5,2.6],["중국",112,36,1],["일본",138.3,36.6,1.6],["동해",131.6,38.6,2.4],["황해",123.6,35.8,2.4],["태평양",150,25,1],["러시아",125,51,1.4],["오스트레일리아",134,-25,1],["인도양",80,0,1]];
+function pip(pt,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,yi]=poly[i],[xj,yj]=poly[j];
+  if(((yi>pt[1])!==(yj>pt[1]))&&(pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi))c=!c;}return c;}
+
+const mapCv=$("#mapCv"),mctx=mapCv.getContext("2d");const MW=640,MH=440;
+const MP={R0:175,zoom:1,px:0,py:0,lon0:127,lat0:30,placed:null};
+function mProj(lon,lat){const l=lon*D2R,p=lat*D2R,l0=MP.lon0*D2R,p0=MP.lat0*D2R,R=MP.R0*MP.zoom;
+  const cc=Math.sin(p0)*Math.sin(p)+Math.cos(p0)*Math.cos(p)*Math.cos(l-l0);
+  return {x:MW/2+MP.px+R*Math.cos(p)*Math.sin(l-l0),y:MH/2+MP.py-R*(Math.cos(p0)*Math.sin(p)-Math.sin(p0)*Math.cos(p)*Math.cos(l-l0)),vis:cc>0};}
+function mInv(sx,sy){const R=MP.R0*MP.zoom,x=(sx-MW/2-MP.px)/R,y=-(sy-MH/2-MP.py)/R,r=Math.hypot(x,y);if(r>1)return null;
+  const c=Math.asin(r),p0=MP.lat0*D2R;if(r<1e-9)return {lon:MP.lon0,lat:MP.lat0};
+  const lat=Math.asin(Math.cos(c)*Math.sin(p0)+y*Math.sin(c)*Math.cos(p0)/r)/D2R;
+  const lon=MP.lon0+Math.atan2(x*Math.sin(c),r*Math.cos(c)*Math.cos(p0)-y*Math.sin(c)*Math.sin(p0))/D2R;return {lon,lat};}
+function poly(ctx,pts){ctx.beginPath();pts.forEach(([lo,la],i)=>{const q=mProj(lo,la);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});ctx.closePath();}
+function drawGaugeDisc(ctx,x,y,r,pin){
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=r*.25;ctx.fillStyle="#f6f6f2";ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.restore();
+  ctx.strokeStyle="#333";ctx.lineWidth=Math.max(.6,r*.02);
+  [0.86,0.6,0.42,0.29,0.18,0.09].forEach((k,i)=>{ctx.setLineDash(i%2?[r*.04,r*.04]:[]);ctx.beginPath();ctx.arc(x,y,r*k,0,7);ctx.stroke();});
+  ctx.setLineDash([]);if(pin!==false){ctx.fillStyle="#555";ctx.beginPath();ctx.arc(x,y,Math.max(2,r*.05),0,7);ctx.fill();}
+}
+function drawMap(){
+  const c=mctx;c.setTransform(2,0,0,2,0,0);
+  const g=c.createLinearGradient(0,0,0,MH);g.addColorStop(0,"#25303a");g.addColorStop(1,"#141b21");c.fillStyle=g;c.fillRect(0,0,MW,MH);
+  const R=MP.R0*MP.zoom,cx=MW/2+MP.px,cy=MH/2+MP.py;
+  c.save();c.beginPath();c.arc(cx,cy,R,0,7);c.clip();
+  const og=c.createRadialGradient(cx-R*.3,cy-R*.35,R*.1,cx,cy,R);og.addColorStop(0,"#5ba7dd");og.addColorStop(1,"#1d5e98");c.fillStyle=og;c.fillRect(0,0,MW,MH);
+  c.strokeStyle="rgba(255,255,255,.18)";c.lineWidth=1;
+  for(let lo=60;lo<=200;lo+=10){c.beginPath();let f=true;for(let la=-80;la<=80;la+=4){const q=mProj(lo,la);if(!q.vis){f=true;continue;}f?c.moveTo(q.x,q.y):c.lineTo(q.x,q.y);f=false;}c.stroke();}
+  for(let la=-60;la<=70;la+=10){c.beginPath();let f=true;for(let lo=40;lo<=220;lo+=3){const q=mProj(lo,la);if(!q.vis){f=true;continue;}f?c.moveTo(q.x,q.y):c.lineTo(q.x,q.y);f=false;}c.stroke();}
+  LAND.forEach((p,i)=>{poly(c,p);c.fillStyle=i===0?"#8fb267":"#9cbd72";c.fill();c.strokeStyle="rgba(60,80,40,.6)";c.lineWidth=1;c.stroke();});
+  poly(c,KOREA);c.fillStyle="#9cbd72";c.fill();c.stroke();
+  // 산맥 느낌의 음영
+  [[103,33,9],[88,31,8],[118,44,4],[127.5,40.4,1.2],[128.5,37.5,.9]].forEach(([lo,la,s])=>{const q=mProj(lo,la);const rr=s*D2R*R;const hg=c.createRadialGradient(q.x,q.y,0,q.x,q.y,rr);hg.addColorStop(0,"rgba(176,128,72,.75)");hg.addColorStop(1,"rgba(176,128,72,0)");c.fillStyle=hg;c.beginPath();c.arc(q.x,q.y,rr,0,7);c.fill();});
+  c.textAlign="center";c.textBaseline="middle";
+  LABELS.forEach(([t,lo,la,z])=>{if(MP.zoom<z)return;if(t==="대한민국"&&!MP.placed)return;const q=mProj(lo,la);if(!q.vis)return;const sea=t.endsWith("해")||t.endsWith("양");
+    c.font=`${sea?"italic ":""}${Math.round(clamp(11+MP.zoom*1.2,12,20))}px "Gowun Dodum",sans-serif`;c.fillStyle=sea?"rgba(230,244,255,.9)":"#24341a";c.fillText(t,q.x,q.y);});
+  if(MP.placed){const q=mProj(MP.placed.lon,MP.placed.lat);drawGaugeDisc(c,q.x,q.y,Math.max(8,R*0.05));}
+  c.restore();
+  const sh=c.createRadialGradient(cx-R*.35,cy-R*.4,R*.2,cx,cy,R);sh.addColorStop(0,"rgba(255,255,255,.12)");sh.addColorStop(.75,"rgba(0,0,0,0)");sh.addColorStop(1,"rgba(0,0,0,.45)");
+  c.fillStyle=sh;c.beginPath();c.arc(cx,cy,R,0,7);c.fill();
+  c.fillStyle="rgba(255,255,255,.7)";c.font='13px "Gowun Dodum",sans-serif';c.textAlign="left";c.fillText(`확대 ×${MP.zoom.toFixed(1)}`,12,MH-14);
+}
+function zoomAt(f,sx,sy){const nz=clamp(MP.zoom*f,1,10);f=nz/MP.zoom;const cx=MW/2+MP.px,cy=MH/2+MP.py;MP.px=sx-(sx-cx)*f-MW/2;MP.py=sy-(sy-cy)*f-MH/2;MP.zoom=nz;limitPan();}
+function limitPan(){const R=MP.R0*MP.zoom;MP.px=clamp(MP.px,-R,R);MP.py=clamp(MP.py,-R,R);}
+function mLocal(e){const r=mapCv.getBoundingClientRect();return [(e.clientX-r.left)*MW/r.width,(e.clientY-r.top)*MH/r.height];}
+const ptrs=new Map();let pinch0=null;
+mapCv.addEventListener("pointerdown",e=>{mapCv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,mLocal(e));if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a[0]-b[0],a[1]-b[1]),z:MP.zoom};}});
+mapCv.addEventListener("pointermove",e=>{if(!ptrs.has(e.pointerId))return;const p=mLocal(e),o=ptrs.get(e.pointerId);
+  if(ptrs.size===2&&pinch0){ptrs.set(e.pointerId,p);const [a,b]=[...ptrs.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);zoomAt(pinch0.z*d/pinch0.d/MP.zoom,(a[0]+b[0])/2,(a[1]+b[1])/2);return;}
+  MP.px+=p[0]-o[0];MP.py+=p[1]-o[1];limitPan();ptrs.set(e.pointerId,p);});
+const endP=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;};
+mapCv.addEventListener("pointerup",endP);mapCv.addEventListener("pointercancel",endP);
+mapCv.addEventListener("wheel",e=>{e.preventDefault();const p=mLocal(e);zoomAt(e.deltaY<0?1.15:1/1.15,p[0],p[1]);},{passive:false});
+mapCv.addEventListener("dblclick",e=>{const p=mLocal(e);zoomAt(1.6,p[0],p[1]);});
+$("#zIn").onclick=()=>zoomAt(1.4,MW/2,MH/2);$("#zOut").onclick=()=>zoomAt(1/1.4,MW/2,MH/2);
+
+const GSVG=`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#f6f6f2" stroke="#999"/>${[40,28,20,14,9,4.5].map((r,i)=>`<circle cx="50" cy="50" r="${r}" fill="none" stroke="#333" stroke-width=".8" ${i%2?'stroke-dasharray="2 2"':''}/>`).join("")}<circle cx="50" cy="50" r="3" fill="#444"/><text x="50" y="13" font-size="7" text-anchor="middle" fill="#333">30</text></svg>`;
+const GHOST=`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="rgba(246,246,242,.55)" stroke="#fff" stroke-width="2"/><path d="M50 8V40M50 60V92M8 50H40M60 50H92" stroke="#e33" stroke-width="2"/><circle cx="50" cy="50" r="4" fill="#e33"/></svg>`;
+$("#gToken").innerHTML=GSVG;
+let ghost=null;
+$("#gToken").addEventListener("pointerdown",e=>{e.preventDefault();$("#gToken").setPointerCapture(e.pointerId);ghost=document.createElement("div");ghost.className="ghost";ghost.innerHTML=GHOST;document.body.appendChild(ghost);moveGhost(e);});
+function moveGhost(e){if(ghost){ghost.style.left=e.clientX+"px";ghost.style.top=e.clientY+"px";}}
+$("#gToken").addEventListener("pointermove",moveGhost);
+$("#gToken").addEventListener("pointerup",e=>{if(!ghost)return;ghost.remove();ghost=null;const r=mapCv.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){return;}
+  const [x,y]=mLocal(e);dropGauge(x,y);});
+$("#gToken").addEventListener("pointercancel",()=>{if(ghost){ghost.remove();ghost=null;}});
+$("#gToken").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();dropGauge(MW/2,MH/2);}});
+function mapMsg(t,cls){const m=$("#mapMsg");m.className="msg "+(cls||"");m.textContent=t;}
+function dropGauge(x,y){
+  const ll=mInv(x,y);
+  if(!ll){mapMsg("측정기는 지구본 위에 붙여야 해요.","bad");snd("bad");return;}
+  if(MP.zoom<3){mapMsg("정확한 위치에 붙이려면 먼저 더 확대해 보세요. (확대 ×3 이상)","warn");snd("bad");return;}
+  const inK=pip([ll.lon,ll.lat],KOREA),inJ=pip([ll.lon,ll.lat],JEJU);
+  if(inK&&ll.lat<=38.6||inJ){MP.placed=ll;S.lat=Math.round(ll.lat*10)/10;S.lon=ll.lon;
+    mapMsg(`잘했어요! 우리나라(북위 약 ${S.lat.toFixed(1)}°)에 태양 고도 측정기를 붙였어요.`,"good");snd("good");$("#next0").disabled=false;unlock(1);return;}
+  if(inK){mapMsg("한반도는 맞지만, 우리나라(대한민국)는 조금 더 남쪽이에요.","warn");snd("bad");return;}
+  mapMsg("여기는 우리나라가 아니에요. 동해와 황해 사이에 있는 반도를 찾아보세요.","bad");snd("bad");
+}
+$("#next0").onclick=()=>go(1);
+
+/* =========================================================
+   2단계: 옆에서 보며 높이·거리 맞추기
+   ========================================================= */
+const sideCv=$("#sideCv"),sctx=sideCv.getContext("2d");const SW=640,SH=320,K=5,TABLE=270,LX=90;
+const SD={h:9,gap:44,axis:23.5};
+function sideState(){return {h:SD.h===18,a:Math.abs(SD.axis)<.5,d:SD.gap===30};}
+function updSide(){
+  $("#lampHo").textContent=SD.h+" cm";$("#gapSo").textContent=SD.gap+" cm";
+  const st=sideState();document.querySelectorAll("#setupList li").forEach(li=>li.classList.toggle("ok",st[li.dataset.k]));
+  $("#standUp").disabled=st.a;
+  const all=st.h&&st.a&&st.d;if(all&&$("#next1").disabled){snd("good");unlock(2);}$("#next1").disabled=!all;
+}
+$("#lampH").oninput=e=>{SD.h=+e.target.value;updSide();};
+$("#gapS").oninput=e=>{SD.gap=+e.target.value;updSide();};
+$("#standUp").onclick=()=>{snd("click");tween(SD,"axis",0,700,updSide);};
+$("#next1").onclick=()=>go(2);
+function drawSide(){
+  const c=sctx;c.setTransform(2,0,0,2,0,0);
+  c.fillStyle="#1b2229";c.fillRect(0,0,SW,SH);
+  c.fillStyle="#2b343c";c.fillRect(0,TABLE,SW,SH-TABLE);c.fillStyle="#3a454f";c.fillRect(0,TABLE,SW,3);
+  // 눈금자 바닥
+  c.fillStyle="rgba(255,255,255,.35)";for(let x=LX;x<SW;x+=K*5){c.fillRect(x,TABLE+3,1,(x-LX)%(K*10)===0?9:5);}
+  const gcY=TABLE-18*K, gcX=LX+(SD.gap+10)*K, gr=10*K;
+  const ly=TABLE-SD.h*K;
+  // 기준선
+  c.setLineDash([6,5]);c.lineWidth=1.5;
+  c.strokeStyle=sideState().h?"#5fcf98":"rgba(255,210,120,.8)";c.beginPath();c.moveTo(20,ly);c.lineTo(SW-20,ly);c.stroke();
+  c.strokeStyle="rgba(140,200,255,.8)";c.beginPath();c.moveTo(20,gcY);c.lineTo(SW-20,gcY);c.stroke();c.setLineDash([]);
+  // 전등
+  c.fillStyle="#6b6f74";c.beginPath();c.ellipse(LX,TABLE,34,7,0,0,7);c.fill();c.fillRect(LX-3,ly+14,6,TABLE-ly-14);
+  c.fillStyle="#9aa0a6";c.fillRect(LX-10,ly+6,20,12);
+  const bg=c.createRadialGradient(LX-3,ly-3,1,LX,ly,13);bg.addColorStop(0,"#fff");bg.addColorStop(1,"#c9ced3");c.fillStyle=bg;c.beginPath();c.arc(LX,ly,12,0,7);c.fill();
+  // 지구본
+  c.fillStyle="#4a4030";c.beginPath();c.ellipse(gcX,TABLE,40,8,0,0,7);c.fill();c.fillRect(gcX-4,gcY+gr,8,TABLE-gcY-gr);
+  const og=c.createRadialGradient(gcX-gr*.4,gcY-gr*.4,4,gcX,gcY,gr);og.addColorStop(0,"#64aee3");og.addColorStop(1,"#1d4f80");c.fillStyle=og;c.beginPath();c.arc(gcX,gcY,gr,0,7);c.fill();
+  c.fillStyle="rgba(120,170,90,.85)";c.beginPath();c.ellipse(gcX-10,gcY-14,18,12,.4,0,7);c.fill();c.beginPath();c.ellipse(gcX+16,gcY+12,10,16,-.3,0,7);c.fill();
+  c.strokeStyle="#b08a3a";c.lineWidth=3;c.beginPath();c.arc(gcX,gcY,gr+6,Math.PI*.5+.15,Math.PI*1.5-.15,false);c.stroke();
+  const a=SD.axis*D2R;c.strokeStyle="#ffc93c";c.lineWidth=2.5;c.setLineDash([6,4]);c.beginPath();c.moveTo(gcX-Math.sin(a)*(gr+22),gcY+Math.cos(a)*(gr+22));c.lineTo(gcX+Math.sin(a)*(gr+22),gcY-Math.cos(a)*(gr+22));c.stroke();c.setLineDash([]);
+  c.fillStyle="#fff";c.beginPath();c.arc(gcX-gr*.62,gcY-gr*.55,5,0,7);c.fill();
+  // 거리 화살표
+  const y2=TABLE+28,x1=LX,x2=gcX-gr;
+  c.strokeStyle=sideState().d?"#5fcf98":"#ffd27a";c.fillStyle=c.strokeStyle;c.lineWidth=2;c.beginPath();c.moveTo(x1,y2);c.lineTo(x2,y2);c.stroke();
+  [[x1,1],[x2,-1]].forEach(([x,s])=>{c.beginPath();c.moveTo(x,y2);c.lineTo(x+8*s,y2-5);c.lineTo(x+8*s,y2+5);c.fill();});
+  c.font='16px "Jua",sans-serif';c.textAlign="center";c.fillText(SD.gap+" cm",(x1+x2)/2,y2-8);
+  c.setLineDash([3,3]);c.strokeStyle="rgba(255,255,255,.3)";c.beginPath();c.moveTo(x2,gcY);c.lineTo(x2,y2+6);c.stroke();c.setLineDash([]);
+  c.font='14px "Gowun Dodum",sans-serif';c.textAlign="left";
+  c.fillStyle="rgba(255,210,120,.95)";c.fillText(`전등 중심 ${SD.h} cm`,12,ly-10);
+  c.fillStyle="rgba(140,200,255,.95)";c.textAlign="right";c.fillText(`지구본 중심 18 cm`,SW-12,gcY-10);
+}
+
+/* =========================================================
+   실험 장면 (위에서 비스듬히)
+   ========================================================= */
+const sceneCv=$("#sceneCv"),cx2=sceneCv.getContext("2d");const W=760,H=440,CX=380,FY=262;
+const BLOBS=[[-.35,-.35,.32,.22,.5],[.25,-.1,.2,.32,-.4],[-.1,.35,.25,.15,.2],[.45,.4,.12,.2,.8],[-.5,.15,.12,.18,0]];
+function orbitR(gap){return 110+4.6*gap;}
+function floorPt(th,gap){const rx=orbitR(gap),ry=rx*.36;return [CX+rx*Math.cos(th*D2R),FY+ry*Math.sin(th*D2R)];}
+function drawGlobe(c,x,y,r,m){
+  const u=dirTo(m.th);
+  c.save();c.beginPath();c.arc(x,y,r,0,7);c.clip();
+  const og=c.createRadialGradient(x-r*.3,y-r*.35,r*.1,x,y,r);og.addColorStop(0,"#4f9bd6");og.addColorStop(1,"#174878");c.fillStyle=og;c.fillRect(x-r,y-r,2*r,2*r);
+  BLOBS.forEach(([bx,by,rx,ry,rot],i)=>{c.fillStyle=i%2?"#6f9f4c":"#8aa957";c.beginPath();c.ellipse(x+bx*r,y+by*r,rx*r,ry*r,rot,0,7);c.fill();c.fillStyle="rgba(170,120,60,.55)";c.beginPath();c.ellipse(x+bx*r,y+by*r,rx*r*.45,ry*r*.4,rot,0,7);c.fill();});
+  if(S.lampOn){
+    const lx=u[0],lz=u[2];
+    const hl=c.createRadialGradient(x+lx*r*.55,y-r*.15+(-lz)*0,r*.05,x+lx*r*.4,y,r*1.1);hl.addColorStop(0,"rgba(255,248,220,.45)");hl.addColorStop(.5,"rgba(255,248,220,0)");c.fillStyle=hl;c.fillRect(x-r,y-r,2*r,2*r);
+    const sg=Math.abs(lx)<1e-6?1:Math.sign(lx),e=r*Math.abs(lz);
+    c.beginPath();c.moveTo(x,y-r);
+    if(sg>0){c.arc(x,y,r,-Math.PI/2,Math.PI/2,true);lz>0?c.ellipse(x,y,e,r,0,Math.PI/2,Math.PI*1.5,false):c.ellipse(x,y,e,r,0,Math.PI/2,-Math.PI/2,true);}
+    else{c.arc(x,y,r,-Math.PI/2,Math.PI/2,false);lz>0?c.ellipse(x,y,e,r,0,Math.PI/2,-Math.PI/2,true):c.ellipse(x,y,e,r,0,Math.PI/2,Math.PI*1.5,false);}
+    c.closePath();c.fillStyle="rgba(4,8,20,.78)";c.filter="blur("+(r*.06).toFixed(1)+"px)";c.fill();c.filter="none";
+  }else{c.fillStyle="rgba(3,6,14,.86)";c.fillRect(x-r,y-r,2*r,2*r);}
+  c.restore();
+  // 측정기
+  const n=gaugeNormal(m,m.tg);
+  if(n[2]>-0.05){const gx=x+n[0]*r*.97,gy=y-n[1]*r*.97,sz=r*.2;c.save();c.translate(gx,gy);
+    const ang=Math.atan2(-n[1],n[0]);c.rotate(ang);c.scale(Math.max(.25,n[2]),1);c.rotate(-ang);
+    c.globalAlpha=S.lampOn?1:.45;drawGaugeDisc(c,0,0,sz,true);c.restore();}
+  // 자전축
+  const a=axisVec(m),ax=a[0],ay=-a[1],L=r*1.38;
+  c.strokeStyle="#ffc22e";c.lineWidth=2.5;c.setLineDash([6,5]);c.beginPath();c.moveTo(x-ax*L,y-ay*L);c.lineTo(x+ax*L,y+ay*L);c.stroke();c.setLineDash([]);
+  if(!axisOk(m)){c.strokeStyle="rgba(95,207,152,.75)";c.lineWidth=2;c.setLineDash([2,5]);const T=m.tilt*D2R;c.beginPath();c.moveTo(x-Math.sin(T)*L,y+Math.cos(T)*L);c.lineTo(x+Math.sin(T)*L,y-Math.cos(T)*L);c.stroke();c.setLineDash([]);}
+}
+function drawScene(){
+  const m=M[mode],c=cx2;c.setTransform(2,0,0,2,0,0);
+  const on=S.lampOn;
+  const bg=c.createLinearGradient(0,0,0,H);bg.addColorStop(0,on?"#1d232b":"#090b0e");bg.addColorStop(.5,on?"#2a3039":"#0c0f13");bg.addColorStop(.52,on?"#5b616a":"#14171b");bg.addColorStop(1,on?"#3a3f46":"#0e1013");c.fillStyle=bg;c.fillRect(0,0,W,H);
+  const bulbY=FY-80;
+  if(on){const fg=c.createRadialGradient(CX,FY,10,CX,FY,380);fg.addColorStop(0,"rgba(255,240,205,.55)");fg.addColorStop(1,"rgba(255,240,205,0)");c.fillStyle=fg;c.beginPath();c.ellipse(CX,FY,420,170,0,0,7);c.fill();}
+  const rx=orbitR(m.gap);c.strokeStyle=on?"rgba(255,255,255,.22)":"rgba(255,255,255,.1)";c.setLineDash([4,6]);c.lineWidth=1.2;c.beginPath();c.ellipse(CX,FY,rx,rx*.36,0,0,7);c.stroke();c.setLineDash([]);
+  if(mode==="vert"||mode==="tilt"){
+    [-90,-180,-270,-360].forEach((t,i)=>{const [px,py]=floorPt(t,m.gap);const ox=Math.cos(t*D2R)*30,oy=Math.sin(t*D2R)*18+16;
+      c.fillStyle="rgba(255,255,255,.12)";c.beginPath();c.ellipse(px,py,30,10,0,0,7);c.fill();
+      c.fillStyle=m.idx===i?"#f3b63a":"#e8e4dc";c.beginPath();c.arc(px+ox,py+oy,13,0,7);c.fill();
+      c.fillStyle="#2a2a2a";c.font='15px "Jua",sans-serif';c.textAlign="center";c.textBaseline="middle";c.fillText(POS[i],px+ox,py+oy+1);});
+    // 공전 방향 화살표
+    c.strokeStyle="rgba(255,255,255,.35)";c.lineWidth=2;c.beginPath();c.ellipse(CX,FY,rx+22,(rx+22)*.36,0,-Math.PI*.62,-Math.PI*.8,true);c.stroke();
+    const ta=-Math.PI*.8,ex=CX+(rx+22)*Math.cos(ta),ey=FY+(rx+22)*.36*Math.sin(ta);c.fillStyle="rgba(255,255,255,.45)";c.beginPath();c.moveTo(ex,ey);c.lineTo(ex+9,ey-4);c.lineTo(ex+6,ey+6);c.fill();
+  }
+  const [gx,gyF]=floorPt(m.th,m.gap),depth=Math.sin(m.th*D2R),s=1+.16*depth,r=52*s,gy=gyF-80*s;
+  const items=[{y:FY,f:()=>{ // 전등
+      c.fillStyle="#5d5547";c.beginPath();c.ellipse(CX,FY,28,9,0,0,7);c.fill();c.fillStyle="#8b8f94";c.fillRect(CX-3,bulbY+14,6,FY-bulbY-14);c.fillStyle="#b4b8bc";c.fillRect(CX-9,bulbY+6,18,10);
+      if(on){const gl=c.createRadialGradient(CX,bulbY,2,CX,bulbY,130);gl.addColorStop(0,"rgba(255,255,255,1)");gl.addColorStop(.12,"rgba(255,250,225,.95)");gl.addColorStop(.35,"rgba(255,235,180,.35)");gl.addColorStop(1,"rgba(255,235,180,0)");c.fillStyle=gl;c.beginPath();c.arc(CX,bulbY,130,0,7);c.fill();}
+      else{const bb=c.createRadialGradient(CX-3,bulbY-3,1,CX,bulbY,12);bb.addColorStop(0,"#d6dade");bb.addColorStop(1,"#6b7178");c.fillStyle=bb;c.beginPath();c.arc(CX,bulbY,11,0,7);c.fill();}}},
+    {y:gyF,f:()=>{c.fillStyle="#6b5a32";c.beginPath();c.ellipse(gx,gyF,30*s,10*s,0,0,7);c.fill();c.fillStyle="#4d4126";c.fillRect(gx-3*s,gy+r,6*s,gyF-gy-r);
+      c.strokeStyle="#8a7440";c.lineWidth=3*s;c.beginPath();const a=axisVec(m);const ang=Math.atan2(-a[1],a[0]);c.arc(gx,gy,r+5*s,ang+.25,ang+Math.PI-.25);c.stroke();
+      drawGlobe(c,gx,gy,r,m);}}];
+  items.sort((a,b)=>a.y-b.y).forEach(i=>i.f());
+  if(mode==="explore"||mode==="light"){const y=FY+40;c.strokeStyle="rgba(255,255,255,.5)";c.lineWidth=1.5;c.beginPath();c.moveTo(CX,y);c.lineTo(gx+r*.0,y);c.stroke();
+    c.fillStyle="rgba(255,255,255,.85)";c.font='15px "Jua",sans-serif';c.textAlign="center";c.fillText(`${m.gap} cm`,(CX+gx)/2,y-8);}
+  if(!on){c.fillStyle="rgba(255,255,255,.55)";c.font='15px "Gowun Dodum",sans-serif';c.textAlign="center";c.fillText("전등이 꺼져 있어요",CX,H-18);}
+}
+
+/* ---------- 확대 화면 (측정기) ---------- */
+const cuCv=$("#cuCv"),cctx=cuCv.getContext("2d");const CW=400,CH=380,PPC=80,GX=200,GY=304;
+function drawCU(){
+  const m=M[mode],c=cctx;c.setTransform(2,0,0,2,0,0);
+  const on=S.lampOn,ok=ready(m),f=facing(m);
+  const g=c.createLinearGradient(0,0,0,CH);g.addColorStop(0,"#2d6aa0");g.addColorStop(1,"#3f86bf");c.fillStyle=g;c.fillRect(0,0,CW,CH);
+  c.fillStyle="#86ad5c";c.beginPath();c.moveTo(150,0);c.bezierCurveTo(250,60,170,140,240,210);c.bezierCurveTo(290,260,250,330,300,380);c.lineTo(110,380);c.bezierCurveTo(140,300,90,250,130,180);c.bezierCurveTo(150,120,80,60,120,0);c.fill();
+  c.fillStyle="rgba(170,120,60,.45)";c.beginPath();c.ellipse(210,150,40,70,.3,0,7);c.fill();
+  c.strokeStyle="rgba(255,255,255,.2)";c.lineWidth=1;for(let y=40;y<CH;y+=90){c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(CW/2,y-18,CW,y);c.stroke();}
+  // 측정기 원판
+  c.save();c.shadowColor="rgba(0,0,0,.4)";c.shadowBlur=10;c.shadowOffsetY=3;c.fillStyle="#f5f4ee";c.beginPath();c.arc(GX,GY,1.75*PPC,0,7);c.fill();c.restore();
+  c.strokeStyle="#3b3b3b";c.lineWidth=1;
+  const rings=[[30],[40],[50],[60],[70]];
+  rings.forEach(([a],i)=>{const rr=GNOMON/Math.tan(a*D2R)*PPC;c.setLineDash(i%2?[5,4]:[]);c.beginPath();c.arc(GX,GY,rr,0,7);c.stroke();
+    c.setLineDash([]);if(a<=50){c.fillStyle="#333";c.font='11px "Gowun Dodum",sans-serif';c.textAlign="center";c.fillText(a+"°",GX+(a===50?14:0),GY-rr-3);}});
+  c.setLineDash([2,3]);c.beginPath();c.arc(GX,GY,PPC,0,7);c.stroke();c.setLineDash([]);
+  c.fillStyle="#333";c.font='11px "Gowun Dodum",sans-serif';c.fillText("1cm",GX+PPC-14,GY+14);
+  if(!on||!f){c.fillStyle="rgba(4,8,16,"+(on?.35:.62)+")";c.fillRect(0,0,CW,CH);}
+  else{const lg=c.createLinearGradient(0,CH,0,0);lg.addColorStop(0,"rgba(255,240,200,.28)");lg.addColorStop(1,"rgba(255,240,200,0)");c.fillStyle=lg;c.fillRect(0,0,CW,CH);}
+  if(ok){const L=shadow(m).len*PPC;
+    c.save();c.filter="blur(1.2px)";c.fillStyle="rgba(22,26,40,.78)";c.beginPath();c.moveTo(GX-4,GY);c.lineTo(GX-1.6,GY-L);c.quadraticCurveTo(GX,GY-L-2.5,GX+1.6,GY-L);c.lineTo(GX+4,GY);c.closePath();c.fill();c.restore();}
+  const pg=c.createRadialGradient(GX-2,GY-2,1,GX,GY,6);pg.addColorStop(0,"#fff");pg.addColorStop(1,"#6d7177");c.fillStyle=pg;c.beginPath();c.arc(GX,GY,5.5,0,7);c.fill();
+  c.fillStyle="rgba(255,255,255,.9)";c.font='13px "Gowun Dodum",sans-serif';c.textAlign="left";c.fillText("↑ 북극 쪽",10,20);c.fillText("↓ 전등 쪽",10,CH-12);
+  let msg="";if(!on)msg="전등이 꺼져 있어요";else if(!axisOk(m))msg="자전축 방향을 먼저 맞추세요";else if(!f)msg="측정기가 전등을 향하지 않아요";
+  if(msg&&!anim.length){c.fillStyle="rgba(0,0,0,.55)";c.beginPath();c.roundRect?c.roundRect(CW/2-120,26,240,34,10):c.rect(CW/2-120,26,240,34);c.fill();c.fillStyle="#fff";c.font='16px "Jua",sans-serif';c.textAlign="center";c.fillText(msg,CW/2,48);}
+}
+
+/* ---------- 자 ---------- */
+const ruler=$("#ruler"),cuWrap=$("#cuWrap");
+const RU={x:46,y:356,a:0};
+(function(){let t="";for(let i=0;i<=50;i++){const x=2+i,h=i%10===0?3.6:i%5===0?2.6:1.6;t+=`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="#1d2a36" stroke-width="${i%10===0?.22:.14}"/>`;if(i%10===0)t+=`<text x="${x}" y="6.6" font-size="2.6" text-anchor="middle" fill="#1d2a36" font-family="Jua,sans-serif">${i/10}</text>`;}
+  ruler.innerHTML=`<svg viewBox="0 0 54 9" preserveAspectRatio="none"><rect x="0" y="0" width="54" height="9" rx=".6" fill="rgba(255,252,225,.62)" stroke="rgba(120,100,40,.7)" stroke-width=".15"/>${t}<text x="50" y="8" font-size="1.8" fill="#1d2a36" text-anchor="end">cm</text></svg>`;})();
+function placeRuler(){const k=cuCv.clientWidth/CW;const ppc=PPC*k;ruler.style.width=(5.4*ppc)+"px";ruler.style.height=(0.9*ppc)+"px";
+  ruler.style.transformOrigin=`${0.2*ppc}px 0px`;ruler.style.transform=`translate(${RU.x*k-0.2*ppc}px,${RU.y*k}px) rotate(${RU.a}deg)`;}
+let rDrag=null;
+ruler.addEventListener("pointerdown",e=>{ruler.setPointerCapture(e.pointerId);rDrag={x:e.clientX,y:e.clientY};e.preventDefault();});
+ruler.addEventListener("pointermove",e=>{if(!rDrag)return;const k=cuCv.clientWidth/CW;RU.x=clamp(RU.x+(e.clientX-rDrag.x)/k,0,CW);RU.y=clamp(RU.y+(e.clientY-rDrag.y)/k,0,CH);rDrag={x:e.clientX,y:e.clientY};placeRuler();});
+ruler.addEventListener("pointerup",()=>rDrag=null);ruler.addEventListener("pointercancel",()=>rDrag=null);
+ruler.addEventListener("keydown",e=>{const d=e.shiftKey?5:1;if(e.key==="ArrowLeft")RU.x-=d;else if(e.key==="ArrowRight")RU.x+=d;else if(e.key==="ArrowUp")RU.y-=d;else if(e.key==="ArrowDown")RU.y+=d;else if(e.key==="r"||e.key==="R")RU.a-=90;else return;e.preventDefault();placeRuler();});
+$("#rotR").onclick=()=>{RU.a-=90;placeRuler();};
+$("#resetR").onclick=()=>{RU.x=46;RU.y=356;RU.a=0;placeRuler();};
+new ResizeObserver(placeRuler).observe(cuWrap);
+
+/* ---------- 실험 작업대 구성 ---------- */
+const LABS={
+  light:{tag:'<b>4</b>실험해요',title:"전등을 켜요",desc:"스위치를 눌러 전등을 켜고, 오른쪽 확대 화면에서 태양 고도 측정기에 그림자가 생기는지 살펴봐요."},
+  explore:{tag:'미리 해 보기',title:"그림자 길이를 미리 재어 봐요",desc:"전등과 지구본 사이의 거리를 바꿔 보고, 자전축을 수직으로 세웠을 때와 기울였을 때의 그림자 길이를 자로 재어 비교해 봐요."},
+  vert:{tag:'<b>4</b>실험해요',title:"자전축이 수직인 채로 공전시키며 그림자 길이를 재요",desc:"지구본을 서쪽에서 동쪽(시계 반대 방향)으로 공전시키면서 가, 나, 다, 라 위치마다 측정기를 전등 쪽으로 돌리고 그림자 길이를 재요. 측정기가 전등을 정면으로 향할 때가 태양이 남중했을 때예요."},
+  tilt:{tag:'<b>5</b>실험해요',title:"자전축을 기울인 채로 똑같이 재어요",desc:"자전축을 23.5° 기울인 뒤 4번 실험을 반복해요. 지구본을 공전시킬 때 자전축이 항상 같은 방향을 향하게 해야 해요."}
+};
+function setMode(k){mode=k;if(k!=="light"&&!S.lampOn)S.lampOn=true;const L=LABS[k];$("#labTag").innerHTML=L.tag;$("#labTitle").textContent=L.title;$("#labDesc").textContent=L.desc;
+  document.querySelectorAll(".ctl").forEach(x=>x.hidden=true);
+  $("#ctl-"+(k==="light"?"light":k==="explore"?"explore":"orbit")).hidden=false;
+  $("#exLog").hidden=k!=="explore";$("#mIn").value="";
+  M[k].tries=0;mMsg(S.lampOn?"자를 움직여 그림자 길이를 재어 보세요.":"전등을 켜면 그림자가 생겨요.","");
+  refreshLab();requestAnimationFrame(placeRuler);}
+function mMsg(t,cls){const m=$("#mMsg");m.className="msg "+(cls||"");m.textContent=t;}
+
+function refreshLab(){
+  const m=M[mode];
+  $("#wallSw").setAttribute("aria-pressed",S.lampOn);
+  $("#sceneInfo").textContent=`전등~지구본 ${m.gap} cm · 자전축 ${m.tilt>0.1?"기울임":"수직"}`;
+  let canMeasure=ready(m),nextOk=false;
+  if(mode==="light"){nextOk=S.lampOn;canMeasure=false;$("#mIn").disabled=true;$("#mBtn").disabled=true;}
+  else{
+    if(mode==="explore"){
+      $("#exGapO").textContent=m.gap+" cm";
+      $("#exV").setAttribute("aria-pressed",m.tilt<0.1);$("#exT").setAttribute("aria-pressed",m.tilt>0.1);
+      document.querySelectorAll("#exList li").forEach(li=>li.classList.toggle("ok",!!m.miss[li.dataset.k]));
+      nextOk=m.miss.m1&&m.miss.m2&&m.miss.m3;
+      const tb=$("#exLog tbody");tb.innerHTML=m.log.map(r=>`<tr><td>${r.gap} cm</td><td>${r.t?"기울임":"수직"}</td><td>${r.v.toFixed(1)} cm</td></tr>`).join("");
+    }else{
+      const done=m.rec[m.idx]!=null;
+      if(done)canMeasure=false;
+      $("#posNow").textContent=`지금 위치: ${POS[m.idx]}`;
+      const tb=$("#tiltBtn"),ab=$("#axisBtn"),fb=$("#faceBtn"),mb=$("#moveBtn");
+      tb.hidden=mode!=="tilt"||m.tilted;ab.hidden=mode!=="tilt"||!m.tilted;
+      const busy=anim.length>0;
+      ab.disabled=busy||axisOk(m);
+      fb.disabled=busy||facing(m)||!axisOk(m)||(mode==="tilt"&&!m.tilted);
+      mb.disabled=busy||!done||m.idx>=3;
+      tb.disabled=busy;
+      $("#tipBox").hidden=mode!=="tilt"||!m.tilted;
+      let hint="";
+      if(mode==="tilt"&&!m.tilted)hint="먼저 자전축을 기울여요.";
+      else if(!axisOk(m))hint="자전축이 오른쪽(초록 점선) 방향을 향하게 맞춰요.";
+      else if(!facing(m))hint="측정기를 전등 쪽으로 돌려요.";
+      else if(!done)hint="자로 그림자 길이를 재어 기록해요.";
+      else if(m.idx<3)hint="다음 위치로 공전시켜요.";
+      else hint="네 위치를 모두 재었어요!";
+      $("#orbitHint").textContent=hint;
+      $("#sheet").innerHTML=POS.map((p,i)=>`<div class="${i===m.idx?"now":""}"><span class="pos">${p}</span><span class="v">${m.rec[i]!=null?m.rec[i].toFixed(1):"……"}</span><span style="font-size:15px">cm</span></div>`).join("");
+      nextOk=Object.keys(m.rec).length===4;
+    }
+    $("#mIn").disabled=!canMeasure;$("#mBtn").disabled=!canMeasure;
+  }
+  const nx=$("#nextLab");nx.disabled=!nextOk&&!S.free;nx.textContent=(S.step===4||S.step===6)?"네 지구본 결과 한눈에 보기 →":"다음 단계 →";
+  if(nextOk)unlock(S.step+1);
+}
+$("#nextLab").onclick=()=>go(S.step+1);
+
+// 전등 스위치
+$("#wallSw").onclick=()=>{snd("click");
+  if(S.lampOn){S.lampOn=false;refreshLab();mMsg("전등을 껐어요. 그림자가 사라졌어요.","");return;}
+  let n=0;const fl=()=>{S.lampOn=n%2===0;n++;if(n<5)setTimeout(fl,70+Math.random()*60);else{S.lampOn=true;refreshLab();mMsg("전등이 켜졌어요! 측정기 가운데 막대에 그림자가 생겼어요.","good");}};fl();};
+
+// 미리 해 보기
+$("#exGap").oninput=e=>{M.explore.gap=+e.target.value;$("#mIn").value="";refreshLab();};
+$("#exV").onclick=()=>{snd("click");tween(M.explore,"tilt",0,700);refreshLab();};
+$("#exT").onclick=()=>{snd("click");tween(M.explore,"tilt",TILT,700);refreshLab();};
+
+// 공전
+function moveNext(){
+  const m=M[mode];if(m.idx>=3)return;snd("click");
+  const to=m.th-90;m.idx++;
+  if(mode==="vert"){const tg0=m.tg;tween(m,"th",to,1300);m.tg=tg0;} // 측정기 방향은 그대로 → 전등을 향하지 않게 됨
+  else{ // 지구본을 통째로 돌린 경우: 측정기는 전등 쪽, 자전축 방향은 어긋남
+    tween(m,"th",to,1300);tween(m,"tg",to,1300);tween(m,"psi",180,1300);}
+  refreshLab();
+}
+$("#moveBtn").onclick=moveNext;
+$("#faceBtn").onclick=()=>{const m=M[mode];snd("click");tween(m,"tg",m.th,900);refreshLab();};
+$("#axisBtn").onclick=()=>{const m=M[mode];snd("click");tween(m,"psi",0,1000);tween(m,"tg",m.tg+140,1000);refreshLab();};
+$("#tiltBtn").onclick=()=>{const m=M.tilt;snd("click");m.tilted=true;tween(m,"tilt",TILT,1000);refreshLab();};
+
+// 측정 기록
+function record(){
+  const m=M[mode];if(!ready(m))return;
+  const raw=$("#mIn").value.trim().replace(",",".");const v=parseFloat(raw);
+  if(!isFinite(v)){mMsg("숫자로 써 주세요. 예: 1.2","bad");return;}
+  const L=shadow(m).len,true1=Math.round(L*10)/10;
+  let val=null;
+  if(Math.abs(v-L)<=0.11){val=v;mMsg(`정확해요! 그림자 길이 ${v.toFixed(1)} cm를 기록했어요.`,"good");snd("good");m.tries=0;}
+  else{m.tries=(m.tries||0)+1;snd("bad");
+    if(m.tries>=3){val=true1;mMsg(`실제 길이는 약 ${true1.toFixed(1)} cm예요. 자의 눈금을 다시 살펴보고 이 값으로 기록할게요.`,"warn");m.tries=0;}
+    else{mMsg(m.tries===1?"다시 재어 볼까요? 자의 0 눈금을 가운데 막대에 딱 맞췄는지 확인해요.":"자를 그림자와 나란히 세우고(자 돌리기), 그림자 끝이 닿는 작은 눈금까지 세어 보세요.","bad");return;}}
+  $("#mIn").value="";
+  if(mode==="explore"){const t=m.tilt>1;m.log.push({gap:m.gap,t,v:val});
+    if(!t&&m.gap===30)m.miss.m1=true;if(!t&&m.gap!==30)m.miss.m2=true;if(t&&m.gap===30)m.miss.m3=true;
+    if(m.miss.m1&&m.miss.m3){const a=m.log.filter(r=>!r.t&&r.gap===30).pop(),b=m.log.filter(r=>r.t&&r.gap===30).pop();
+      if(a&&b&&m.log[m.log.length-1]===b||m.log[m.log.length-1]===a)mMsg(`같은 자리에서 자전축만 기울였더니 그림자 길이가 ${a.v.toFixed(1)} cm → ${b.v.toFixed(1)} cm로 달라졌어요!`,"good");}}
+  else{m.rec[m.idx]=val;
+    if(Object.keys(m.rec).length===4)mMsg(mode==="vert"?"네 위치를 모두 재었어요. 그림자 길이를 비교해 보세요.":"네 위치를 모두 재었어요. 자전축이 수직일 때와 비교해 보세요.","good");}
+  refreshLab();
+}
+$("#mBtn").onclick=record;$("#mIn").addEventListener("keydown",e=>{if(e.key==="Enter")record();});
+
+/* =========================================================
+   실험관찰 6
+   ========================================================= */
+const ROWS=[["그림자 길이"],["태양의 남중 고도"],["낮의 길이","태양 에너지양, 기온"],["계절"]];
+const KEYS=["shadow","alt","day","energy","season"];
+const ANS={v:"no",t:"yes"};
+const OBS={};let graded=false;
+function cellHTML(col,key){return `<div class="pair">${["yes","no"].map(o=>`<button class="pill" data-c="${col}" data-k="${key}" data-o="${o}" aria-pressed="${OBS[col+key]===o}">${o==="yes"?"변함.":"변하지 않음."}</button>`).join("")}</div>`;}
+function buildObs(){
+  const fmt=r=>POS.map((p,i)=>`<span class="val">${r[i]!=null?r[i].toFixed(1):"–"}</span>`).join("");
+  $("#miniRec").innerHTML=`<span></span>${POS.map(p=>`<span class="k" style="text-align:center">${p}</span>`).join("")}<span class="k">수직</span>${fmt(M.vert.rec)}<span class="k">기울임</span>${fmt(M.tilt.rec)}`;
+  let h=`<div></div><div class="h v">지구본의 자전축이<br>수직인 채 공전할 때</div><div class="h t">지구본의 자전축이<br>기울어진 채 공전할 때</div>`;
+  let ki=0;
+  ROWS.forEach((row,ri)=>{
+    if(row.length===1){const k=KEYS[ki++];h+=`<div class="lbl">${row[0]}</div><div class="cell v">${cellHTML("v",k)}</div><div class="cell t">${cellHTML("t",k)}</div>`;}
+    else{const k1=KEYS[ki++],k2=KEYS[ki++];h+=`<div class="lbl">${row[0]}<hr>${row[1]}</div><div class="cell v">${cellHTML("v",k1)}<hr style="border:0;border-top:2px dotted var(--line);width:100%;margin:2px 0">${cellHTML("v",k2)}</div><div class="cell t">${cellHTML("t",k1)}<hr style="border:0;border-top:2px dotted var(--line);width:100%;margin:2px 0">${cellHTML("t",k2)}</div>`;}
+    if(ri<ROWS.length-1)h+=`<div class="gap"></div><div class="arrow"><span>↓</span><span>↓</span></div>`;
+  });
+  $("#obs").innerHTML=h;
+  $("#obs").querySelectorAll(".pill").forEach(b=>b.onclick=()=>{if(graded)return;OBS[b.dataset.c+b.dataset.k]=b.dataset.o;
+    $("#obs").querySelectorAll(`.pill[data-c="${b.dataset.c}"][data-k="${b.dataset.k}"]`).forEach(x=>x.setAttribute("aria-pressed",x===b));});
+}
+function showMarks(reveal){
+  $("#obs").querySelectorAll(".pill").forEach(b=>{const right=ANS[b.dataset.c]===b.dataset.o,picked=OBS[b.dataset.c+b.dataset.k]===b.dataset.o;
+    b.classList.toggle("right",right&&(picked||reveal));b.classList.toggle("wrong",picked&&!right&&!reveal);});
+}
+$("#gradeBtn").onclick=()=>{
+  const total=KEYS.length*2,miss=["v","t"].reduce((n,c)=>n+KEYS.filter(k=>!OBS[c+k]).length,0);
+  const om=$("#obsMsg");om.hidden=false;
+  if(miss){om.className="msg warn";om.textContent=`아직 고르지 않은 칸이 ${miss}개 있어요.`;return;}
+  let sc=0;["v","t"].forEach(c=>KEYS.forEach(k=>{if(OBS[c+k]===ANS[c])sc++;}));
+  graded=true;showMarks(false);$("#score").textContent=`${sc} / ${total}`;
+  $("#retryBtn").hidden=false;$("#ansBtn").hidden=sc===total;
+  if(sc===total){snd("good");om.className="msg good";om.innerHTML="모두 맞았어요! 자전축이 기울어진 채 공전하면 그림자 길이와 태양의 남중 고도가 달라지고, 그래서 낮의 길이와 기온이 변해 <b>계절</b>이 바뀌어요.";$("#next6").disabled=false;unlock(9);}
+  else{snd("bad");om.className="msg bad";om.textContent="틀린 칸을 확인해 보세요. 내가 잰 그림자 길이를 다시 보면 힌트가 있어요.";}
+};
+$("#retryBtn").onclick=()=>{graded=false;KEYS.forEach(k=>{delete OBS["v"+k];delete OBS["t"+k];});buildObs();$("#score").textContent="";$("#retryBtn").hidden=true;$("#ansBtn").hidden=true;$("#obsMsg").hidden=true;};
+$("#ansBtn").onclick=()=>{showMarks(true);$("#next6").disabled=false;unlock(9);};
+$("#next6").onclick=()=>go(9);
+
+/* =========================================================
+   정리해요
+   ========================================================= */
+const BL=[{id:"b1",opts:["수직인","기울어진"],ans:"기울어진"},{id:"b2",opts:["자전","공전"],ans:"공전"},{id:"b3",opts:["남중 고도","크기"],ans:"남중 고도"}];
+const BS={};
+function blank(i){const b=BL[i];return `<span class="blank">${b.opts.map(o=>`<button class="pill" data-b="${b.id}" data-o="${o}" aria-pressed="false">${o}</button>`).join("")}</span>`;}
+$("#blanks").innerHTML=`지구의 자전축이 ${blank(0)} 채 태양 주위를 ${blank(1)}하기 때문에, 지구의 위치에 따라 태양의 ${blank(2)}가 달라져 계절이 변합니다.`;
+$("#blanks").querySelectorAll(".pill").forEach(p=>p.onclick=()=>{BS[p.dataset.b]=p.dataset.o;$("#blanks").querySelectorAll(`.pill[data-b="${p.dataset.b}"]`).forEach(x=>{x.setAttribute("aria-pressed",x===p);x.classList.remove("right","wrong");});});
+$("#gradeB").onclick=()=>{const sm=$("#sumMsg");sm.hidden=false;
+  if(BL.some(b=>!BS[b.id])){sm.className="msg warn";sm.textContent="빈칸을 모두 골라 주세요.";return;}
+  let sc=0;BL.forEach(b=>{const ok=BS[b.id]===b.ans;if(ok)sc++;const p=$(`#blanks .pill[data-b="${b.id}"][data-o="${BS[b.id]}"]`);p.classList.toggle("right",ok);p.classList.toggle("wrong",!ok);});
+  $("#scoreB").textContent=`${sc} / 3`;
+  if(sc===3){snd("good");sm.className="msg good";sm.innerHTML="<b>실험 완료!</b> 지구의 자전축이 기울어진 채 태양 주위를 공전하기 때문에 계절이 변한다는 것을 알아냈어요.";renderNav();}
+  else{snd("bad");sm.className="msg bad";sm.textContent="다시 생각해 보세요. 자전축이 수직일 때는 그림자 길이가 변했나요?";}
+};
+
+/* =========================================================
+   결과 한눈에 보기: 지구본 4개 + 기록 말풍선
+   ========================================================= */
+const sumCv=$("#sumCv"),sumCtx=sumCv.getContext("2d");const SWD=760,SHT=640,SFY=392,SRX=300,SRY=148;
+let sumMode="vert",sumT0=0;
+const SUMTXT={
+  vert:{tag:"결과 보기",title:"자전축이 수직일 때, 네 위치의 그림자 길이",desc:"가, 나, 다, 라 위치에서 내가 잰 그림자 길이를 지구본 위에 띄웠어요. 네 곳의 그림자를 비교해 보세요.",
+    q:"생각해 보기: 지구본이 공전하며 위치가 바뀌었을 때 그림자 길이가 달라졌나요? 그렇다면 태양의 남중 고도는 어떨까요?"},
+  tilt:{tag:"결과 보기",title:"자전축이 기울어졌을 때, 네 위치의 그림자 길이",desc:"자전축을 기울인 채 공전시키며 잰 그림자 길이를 지구본 위에 띄웠어요. 작은 글씨는 자전축이 수직일 때 잰 값이에요.",
+    q:"생각해 보기: 그림자가 가장 짧은 곳과 가장 긴 곳은 어디인가요? 그림자가 짧을수록 태양의 남중 고도는 어떻고, 그때 우리나라는 어떤 계절일까요?"}
+};
+function openSum(k){sumMode=k;const t=SUMTXT[k];$("#sumTag").textContent=t.tag;$("#sumTitle").textContent=t.title;$("#sumDesc").textContent=t.desc;$("#sumQ").textContent=t.q;
+  const rec=M[k].rec,n=Object.keys(rec).length;
+  $("#sumCap").textContent=n<4?`아직 기록하지 않은 위치가 ${4-n}곳 있어요.`:"말풍선 속 측정기 그림은 내가 기록한 길이로 그린 그림자예요.";
+  $("#sumNext").textContent=k==="vert"?"자전축 기울여서 실험하기 →":"실험관찰 6으로 →";
+  sumT0=performance.now();unlock(S.step+1);}
+$("#sumReplay").onclick=()=>{sumT0=performance.now();snd("click");};
+$("#sumNext").onclick=()=>go(S.step+1);
+function sumPt(th){return [CX+SRX*Math.cos(th*D2R),SFY+SRY*Math.sin(th*D2R)];}
+function bubble(c,i,bx,by,tx,ty,val,ref,pop){
+  const w=150,h=86;
+  c.save();c.translate(bx,by);c.scale(pop,pop);c.translate(-w/2,-h/2);
+  c.globalAlpha=Math.min(1,pop*1.2);
+  c.fillStyle="rgba(255,253,244,.97)";c.strokeStyle="#f3b63a";c.lineWidth=2;
+  c.beginPath();c.roundRect?c.roundRect(0,0,w,h,14):c.rect(0,0,w,h);c.fill();c.stroke();
+  // 꼬리
+  const lx=(tx-bx)/pop+w/2,ly=(ty-by)/pop+h/2;
+  const ax=clamp(lx,22,w-22),ay=ly>h?h:0;
+  c.beginPath();c.moveTo(ax-9,ay);c.lineTo(lx,ly);c.lineTo(ax+9,ay);c.closePath();c.fill();
+  c.beginPath();c.moveTo(ax-9,ay);c.lineTo(lx,ly);c.lineTo(ax+9,ay);c.stroke();
+  c.fillStyle="rgba(255,253,244,1)";c.fillRect(ax-8,ay-(ay?2.5:-0.5),16,3);
+  // 미니 측정기 (1 cm = 17 px)
+  const gx=36,gy=h-16,pp=17;
+  c.save();c.beginPath();c.roundRect?c.roundRect(4,4,64,h-8,10):c.rect(4,4,64,h-8);c.clip();
+  c.fillStyle="#3f86bf";c.fillRect(4,4,64,h-8);
+  c.fillStyle="#f5f4ee";c.beginPath();c.arc(gx,gy,26,0,7);c.fill();
+  c.strokeStyle="#555";c.lineWidth=.8;[0.95,0.67,0.47].forEach((k,j)=>{c.setLineDash(j%2?[2,2]:[]);c.beginPath();c.arc(gx,gy,k*pp,0,7);c.stroke();});c.setLineDash([]);
+  if(val!=null){const L=val*pp;c.fillStyle="rgba(22,26,40,.85)";c.beginPath();c.moveTo(gx-2.5,gy);c.lineTo(gx-1,gy-L);c.lineTo(gx+1,gy-L);c.lineTo(gx+2.5,gy);c.closePath();c.fill();}
+  c.fillStyle="#666";c.beginPath();c.arc(gx,gy,3,0,7);c.fill();
+  c.restore();
+  // 글자
+  c.fillStyle="#f3b63a";c.beginPath();c.arc(90,22,13,0,7);c.fill();
+  c.fillStyle="#2a1d00";c.font='15px "Jua",sans-serif';c.textAlign="center";c.textBaseline="middle";c.fillText(POS[i],90,23);
+  c.fillStyle="#1b2a36";c.font='26px "Gaegu","Jua",sans-serif';c.textAlign="left";c.textBaseline="alphabetic";
+  const vt=val!=null?val.toFixed(1):"–";c.fillText(vt,78,62);const vw=c.measureText(vt).width;
+  c.font='14px "Gowun Dodum",sans-serif';c.fillText("cm",82+vw,62);
+  if(ref!==undefined){c.fillStyle="#5a6b78";c.font='12px "Gowun Dodum",sans-serif';c.fillText(`수직: ${ref!=null?ref.toFixed(1)+" cm":"–"}`,78,79);}
+  c.restore();
+}
+function drawSum(now){
+  const c=sumCtx;c.setTransform(2,0,0,2,0,0);
+  const bg=c.createLinearGradient(0,0,0,SHT);bg.addColorStop(0,"#1d232b");bg.addColorStop(.36,"#2a3039");bg.addColorStop(.38,"#5b616a");bg.addColorStop(1,"#353a41");c.fillStyle=bg;c.fillRect(0,0,SWD,SHT);
+  const fg=c.createRadialGradient(CX,SFY,10,CX,SFY,420);fg.addColorStop(0,"rgba(255,240,205,.5)");fg.addColorStop(1,"rgba(255,240,205,0)");c.fillStyle=fg;c.beginPath();c.ellipse(CX,SFY,440,230,0,0,7);c.fill();
+  c.strokeStyle="rgba(255,255,255,.22)";c.setLineDash([4,6]);c.lineWidth=1.2;c.beginPath();c.ellipse(CX,SFY,SRX,SRY,0,0,7);c.stroke();c.setLineDash([]);
+  const tl=sumMode==="tilt"?TILT:0,rec=M[sumMode].rec,ref=sumMode==="tilt"?M.vert.rec:null;
+  const bulbY=SFY-80;
+  const objs=[{y:SFY,f:()=>{c.fillStyle="#5d5547";c.beginPath();c.ellipse(CX,SFY,28,9,0,0,7);c.fill();c.fillStyle="#8b8f94";c.fillRect(CX-3,bulbY+14,6,SFY-bulbY-14);c.fillStyle="#b4b8bc";c.fillRect(CX-9,bulbY+6,18,10);
+    const gl=c.createRadialGradient(CX,bulbY,2,CX,bulbY,130);gl.addColorStop(0,"rgba(255,255,255,1)");gl.addColorStop(.12,"rgba(255,250,225,.95)");gl.addColorStop(.35,"rgba(255,235,180,.35)");gl.addColorStop(1,"rgba(255,235,180,0)");c.fillStyle=gl;c.beginPath();c.arc(CX,bulbY,130,0,7);c.fill();}}];
+  const tips=[];
+  [-90,-180,-270,-360].forEach((th,i)=>{const [px,py]=sumPt(th),s=1+.16*Math.sin(th*D2R),r=52*s,gy=py-80*s;
+    const m={th,tg:th,gap:30,tilt:tl,psi:0};
+    objs.push({y:py,f:()=>{c.fillStyle="#6b5a32";c.beginPath();c.ellipse(px,py,30*s,10*s,0,0,7);c.fill();c.fillStyle="#4d4126";c.fillRect(px-3*s,gy+r,6*s,py-gy-r);
+      c.strokeStyle="#8a7440";c.lineWidth=3*s;const a=axisVec(m);const ang=Math.atan2(-a[1],a[0]);c.beginPath();c.arc(px,gy,r+5*s,ang+.25,ang+Math.PI-.25);c.stroke();
+      drawGlobe(c,px,gy,r,m);}});
+    const n=gaugeNormal(m,th);const tx=px+n[0]*r*.97,ty=gy-n[1]*r*.97;
+    let bx=px,by=gy-r-62;if(i===2){bx=px+r+90;by=gy-r+6;}
+    tips.push([i,bx,by,i===2?px+r*.6:px,i===2?gy-r*.55:gy-r-8]);
+  });
+  const lampWas=S.lampOn;S.lampOn=true;objs.sort((a,b)=>a.y-b.y).forEach(o=>o.f());S.lampOn=lampWas;
+  tips.forEach(([i,bx,by,tx,ty])=>{const t=clamp((now-sumT0-250-i*350)/450,0,1);if(t<=0)return;const e=t<1?1+2.7*Math.pow(t-1,3)+1.7*Math.pow(t-1,2):1;
+    bubble(c,i,bx,by,tx,ty,rec[i]!=null?rec[i]:null,ref?(ref[i]??null):undefined,Math.max(.01,e));});
+  c.fillStyle="rgba(255,255,255,.55)";c.font='13px "Gowun Dodum",sans-serif';c.textAlign="right";c.textBaseline="alphabetic";
+  c.fillText(`전등~지구본 30 cm · 자전축 ${tl?"23.5° 기울임":"수직"} · 서→동 공전`,SWD-14,SHT-14);
+}
+
+/* ---------- 루프 ---------- */
+function loop(now){
+  stepAnim(now);
+  if(S.step===0)drawMap();
+  else if(S.step===1)drawSide();
+  else if(LABSTEP[S.step]){drawScene();drawCU();}
+  else if(S.step===5||S.step===7)drawSum(now);
+  requestAnimationFrame(loop);
+}
+updSide();renderNav();go(0);requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
+
